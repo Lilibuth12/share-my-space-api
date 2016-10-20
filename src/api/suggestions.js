@@ -47,7 +47,8 @@ export default class SuggestionsApi {
         success: true, 
         data: {
           airbb: result[0],
-          appearHere: result[1]
+          appearHere: result[1],
+          coworking: 0
         }
       });
     }, this._errorHandler);
