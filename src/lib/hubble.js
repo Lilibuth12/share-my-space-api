@@ -1,39 +1,40 @@
 import rp from 'request-promise';
+import Google from '../lib/google';
 
 export default class Hubble {
 
   constructor(config) {
       this.apikey = config.apikey;
+      this.google = new Google({apikey: config.googleKey});
   }
 
   search({postcode, sqft}) {
     console.time('hubble');
-    // If less than 80sqft only going to be a single bed, otherwise double
-    const guests = sqft < 80 ? 1 : 2;
+    const apiKey = this.apikey;
 
-    return rp({
-      method: 'GET',
-      uri: 'https://api.airbnb.com/v2/search_results',
-      qs: {
-          client_id: this.client_id,
-          locale: 'en-UK',
-          currency: 'GBP',
-          _format: 'for_search_results_with_minimal_pricing',
-          _limit: '50',
-          min_bedrooms: 1,
-          location: postcode,
-          guests: guests
-      },
-      json: true
-    }).then((result) => {
-      const listings = result.search_results;
-      const validData = listings.filter(listing => listing.listing.room_type_category === 'private_room');
-      const sum = validData.map(listing => listing.pricing_quote.rate.amount)
-        .reduce((a, b) => a + b);
-      const avg = Math.round((sum / validData.length * 100)) / 100;
+    return this.google.location(postcode)
+      .then(({lat, lng}) => {
+        const people = Math.floor(sqft / 100);
 
-      console.timeEnd('hubble');
-      return avg * 30;
-    });
+        return rp({
+          method: 'GET',
+          uri: 'https://api.hubblehq.com/api/v2/browse',
+          qs: {
+            api_key: apiKey,
+            space_type: "coworking,shared_office",
+            lon: lng,
+            lat: lat,
+            radius: '2km',
+            people: people
+          },
+          json: true
+        }).then((result) => {
+          const sum = result.map(listing => listing.office.price_per_person * people).reduce((a, b) => a + b);
+          const avg = Math.round((sum / result.length * 100)) / 100;
+
+          console.timeEnd('hubble');
+          return avg;
+        })
+      })
   }
 }

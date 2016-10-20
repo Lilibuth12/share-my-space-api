@@ -4,22 +4,22 @@ import rp from 'request-promise';
 import promise from 'bluebird';
 
 import Airbb from '../lib/airbb';
-import Google from '../lib/google';
 import AppearHere from '../lib/appearhere';
+import Hubble from '../lib/hubble';
 
 export default class SuggestionsApi {
 
   constructor() {
     this.keys = {
         google: 'AIzaSyBpxoo3XjiCd7XzOCXEuCGUBj-RjBTFqVI',
-        hubble: '',
+        hubble: '8E59DE77A223275A',
         airbb: '3092nxybyb0otqw18e8nh5nty',
     }
 
     // Setup libs.
     this.airbb = new Airbb({apikey: this.keys.airbb});
-    this.google = new Google({apikey: this.keys.google});
     this.appearHere = new AppearHere();
+    this.hubble = new Hubble({apikey: this.keys.hubble, googleKey: this.keys.google});
 
     return this.routes();
   }
@@ -41,14 +41,15 @@ export default class SuggestionsApi {
     // Make api calls to airbb, appearhere and hubble
     Promise.all([
       this.airbb.search(params),
-      this.appearHere.search(params)
+      this.appearHere.search(params),
+      this.hubble.search(params)
     ]).then((result) => {
       res.json({
         success: true, 
         data: {
           airbb: result[0],
           appearHere: result[1],
-          coworking: 0
+          coworking: result[2]
         }
       });
     }, this._errorHandler);
